@@ -1,0 +1,672 @@
+---
+title: "DETERMINANTS OF THE PRESENCE OF BROWN FAT IN HUMAN "
+author: "Yuhong Shao & Fangshu Yu & Hanghuan Yang & Shengbin Huang"
+date: "2021/4/10"
+output: 
+  pdf_document: 
+    keep_tex: yes
+theme: cerulean
+---
+## Casestudy Description:  
+This case study is to identify the factors determining the existence of brown fat in Humans. We looked at a dataset with 20 possible predictors and used R to build a predictive model that best explains the existence of brown fat in Humans.  
+
+## Data Source:  
+Molecular Imaging Center at The University of Sherbrooke for providing the data.  
+
+## Group Memember and Job Decription:  
+\fbox{%
+\parbox{\textwidth}{%
+\textbf{Shengbin Huang 1004740961\vspace{0.25cm}}:\begin{itemize}
+  \item [1)] 
+  Investigate the relationship between each of the covariates and the presence of brown fat (First half of the dataset).\vspace{0.1cm}
+  \item [2)]
+  Further analyze the model by building classification table.\vspace{0.1cm}
+  \item [3)]
+  Make presentation slides.\newline
+\end{itemize}
+
+\textbf{Yuhong Shao 1004731917\vspace{0.25cm}}:\begin{itemize}
+  \item [1)] 
+  Investigate the relationship between each of the covariates and the presence of brown fat (Second half of the dataset).\vspace{0.1cm}
+  \item [2)]
+  Check outliers of the model.\vspace{0.1cm}
+  \item [3)]
+  Making presentation slides.\newline
+\end{itemize}
+
+\textbf{Fangshu Yu 1002924151\vspace{0.25cm}}:\begin{itemize}
+  \item [1)] 
+  Build preliminary models and make simple optimization(by using the variables that selected by first group member).\vspace{0.1cm}
+  \item [2)]
+  Further analyze the model by using Hosmer-Lemeshow test.\vspace{0.1cm}
+  \item [3)]
+  Make presentation slides and add a conclusion for this report.\newline
+\end{itemize}
+
+\textbf{Hanghuan Yang 1004705768\vspace{0.25cm}}:\begin{itemize}
+  \item [1)] 
+  Build preliminary models and make simple optimization(by using the variables that selected by first group member).\vspace{0.1cm}
+  \item [2)]
+  Further analyze the model by using ROC curve.\vspace{0.1cm}
+  \item [3)]
+  Write this report and find additional references(For instance, some science reports relating to the brown fat).\newline
+\end{itemize}
+}%
+}
+
+
+\section{1. Background and objective of this study:}  
+Brown fat, also known as brown adipose tissue (BAT) is one of the two adipose tissue in human body. In contrast to white fat which stores excess energy and causes obesity, brown fat aids the process of glucose-heat transformation, leading to higher cold resistance (Brazier). There is huge potential in brown fat study, recent research show that brown fat affect cancer progression (Chu, Bos, Gill, Torriani, & Bredella, 2019), therefore knowledge on the association between cancer and brown fat may aid cancer therapy. In addition, the calorie-burning property of brown fat suggests that turning white fat into brown fat may lead to a solution to obesity (Wada et al., 2016), which requires more knowledge on the generation mechanism of brown fat.
+This study intends to find out the effect of factors on the existence of brown using general linear model regression, based on data provided by Molecular Imaging Center at The University of Sherbrooke.\newline\newline
+
+\section{2. Statistical analysis of covariates in the dataset}
+\textbf{\normalsize First, we test relationship between each covariate and the presence of brown fat separately by using different tests. Then, we may have a basic understanding of which is covariate is valid when we construct the model. }
+
+```{r, include=FALSE}
+#setup
+library(readxl)
+library(datasets)
+library(dplyr)
+# please change the path here, I modified it!!!!!!!!!!!!!!!!
+# data <- read_excel("C:/Users/13502/Desktop/BrownFat.xls")
+data = read_excel("BrownFat.xls")
+attach(data)
+n = 4842
+
+#rename the factors
+names(data) <- c("Id", "Sex", "Diabetes", "Age", "Day", "Month", "External_Temperature", "Temperature_2Days", "Temperature_3Days", 
+                    "Temperature_7Days", "Temperature_1Month", "Season", "Duration_Sunshine", "Weight", "Size", "BMI", "Glycemia", 
+                    "LBW", "Cancer_Status", "Cancer_Type", "TSH", "BrownFat", "Total_vol")
+```
+(1) \textbf{\textcolor{blue}{\itshape{Sex:}}}
+
+- Gender of each sample data. In the dataset. Females are labeled as 1, Males are labeled as 2.
+
+- Since P-value in both Chi-square Test and Fisher’s Exact Test is quite small, we may conclude that the relationship between “Sex” and “the presence of brown fat” are significant. Estimated odds-ratio is around 0.30, the odds of the presence of brown fat for females estimated to be about 0.3 times the odds for males.      
+
+```{r include=FALSE}
+#1. Sex
+table1=xtabs(~Sex+BrownFat,data=data)
+#Chi-square Test for Indep:
+chisq.test(table1)
+#Fisher's Exact Test for Indep:
+fisher_test=fisher.test(table1)                                                               
+fisher_test
+```
+
+
+(2) \textbf{\textcolor{blue}{\itshape{Diabetes:}}}
+
+- The presence of diabetes in each sample data. Diabetes is a binary indicator of whether the observed has diabetes.
+
+- Since P-value in both Chi-square Test and Fisher's Exact Test is very small, we may conclude that "Diabetes" is significant. The Estimated odds-ratio is around 0.14, the odds of the presence of brown fat for having diabetes is estimated to be about 0.14 times the odds for those who haven't.  
+
+```{r include=FALSE}
+#2. Diabetes
+table2=xtabs(~Diabetes+BrownFat,data=data)
+#Chi-square Test for Indep:
+chisq.test(table2)
+#Fisher's Exact Test for Indep:
+fisher_test=fisher.test(table2)
+fisher_test
+```
+
+
+(3) \textbf{\textcolor{blue}{\itshape{Age:}}}
+
+- Age of the sample.
+
+- Since P-value in both Wald Test and Likelihood Ratio Test is quite small, we may conclude that "Age" is significant. Unlike other covariates, "Age" and "the presence of brown fat" have negative relationship. The Estimated odds-ratio is around 0.96, the odds of the presence of brown fat is estimated to be decreased a factor of 0.96 for each 1 unit increase of age.  
+
+```{r include=FALSE}
+#3. Age
+fit1=glm(BrownFat~Age,family = binomial, data=data)
+#Wald Test for Indep:
+summary(fit1)
+#LR Test for Indep:
+drop1(fit1,test = "Chisq")
+odds_ratio=exp(-0.040095)
+odds_ratio
+```
+
+(4) \textbf{\textcolor{blue}{\itshape{Day:}}}
+
+- The day that the sample data was collected. In the dataset, it ranges between 1 to 365.
+
+- Since P-value in both Wald Test and Likelihood Ratio Test is greater than 0.05, we may conclude that the relationship between "Day" and "the presence of brown fat" are not significant, they are likely independent.  
+
+```{r include=FALSE}
+#4. Day
+fit2=glm(BrownFat~Day,family = binomial, data=data)
+#Wald Test for Indep:
+summary(fit2)
+#LR Test for Indep:
+drop1(fit2,test = "Chisq")
+```
+
+(5) \textbf{\textcolor{blue}{\itshape{Month:}}}
+
+- The month that the sample data was collected. In the dataset, it ranges between 1 to 12. 
+
+- Since P-values for each months are greater than 0.05 and By Fisher's Exact Test, we may conclude that the relationship between "Month" and "the presence of brown fat" are not significant, they are likely independent.  
+
+```{r include=FALSE}
+#5. Month
+fit3=glm(BrownFat~Month,family = binomial, data=data)
+#Wald Test for Indep:
+summary(fit3)
+#LR Test for Indep:
+drop1(fit3,test = "Chisq")
+```
+
+(6) \textbf{\textcolor{blue}{\itshape{Temperature:}}}
+
+- In the dataset, we have in total 5 variables that are relevant to the temperature, which are External Temperature, External Temperature in 2 days, 3 days, 1 week and 1 month (measured in $^{\circ}$C).
+
+- We want to find whether the presence of brown fat is related to the temperature. After evaluating the data, we noticed the p-value for External Temperature is quite small, therefore, we can conclude that the external temperature have significant effect on the presence of brown fat. Then, we compared the p-value between the data of temperature in 2 days, 3 days, 1 week and 1 month, we found that the shorter the time span of measuring temperature, the greater the influence on the presence or absence of brown fat. Therefore, the data of External Temperature in 2 days effect the brown fat most and in 1 month least.  
+
+```{r include=FALSE}
+# we fit then individaully in model and observe p-value for wald test.
+# p-value 1.58e-06
+fit.1 <- glm(BrownFat ~ External_Temperature, family = poisson(), data = data)
+summary(fit.1)
+
+#p-value 1.55e-04
+fit.2 <- glm(BrownFat ~ Temperature_2Days, family = poisson(), data = data)
+summary(fit.2)
+
+#p-value 6e-05
+fit.3 <- glm(BrownFat ~ Temperature_3Days, family = poisson(), data = data)
+summary(fit.3)
+
+#p-value 6.06e-05
+fit.4 <- glm(BrownFat ~ Temperature_7Days, family = poisson(), data = data)
+summary(fit.4)
+
+#p-value 8.47e-04
+fit.5 <- glm(BrownFat ~ Temperature_1Month, family = poisson(), data = data)
+summary(fit.5)
+```
+
+(7) \textbf{\textcolor{blue}{\itshape{Season:}}}
+
+- The season that the sample data was collected. In the dataset, it ranges between 1 to 4 and represent Spring, Summer, Autumn and Winter respectively. 
+
+- Since p-value in both Wald Test and Likelihood Ratio Test is greater than 0.05, we can conclude that the relationship between "Season" and "the presence of brown fat" are not significant, they are likely independent. 
+
+```{r include=FALSE}
+#8. Season
+fit8=glm(BrownFat~Season,family = binomial, data=data)
+#Wald Test for Indep:
+summary(fit8)
+#LR Test for Indep:
+drop1(fit8,test = "Chisq")
+```
+
+(8) \textbf{\textcolor{blue}{\itshape{Duration of Sunshine:}}}
+
+- The duration of sunshine per day (measured in minute).
+
+- Since P-value in both Wald Test and Likelihood Ratio Test is 0.002(<0.05), we can conclude that the relationship between "Duration Sunshine" and "the presence of brown fat" are significant. The estimated odds-ratio is round 0.9987, the odds of the presence of brown fat is estimated to be decreased a factor of 0.9987 for each 1 minute increase the sunshine duration.  
+
+```{r include=FALSE}
+fit9=glm(BrownFat~Duration_Sunshine,family = binomial, data=data)
+#Wald Test for Indep:
+summary(fit9)
+#LR Test for Indep:
+drop1(fit9,test = "Chisq")
+```
+
+(9) \textbf{\textcolor{blue}{\itshape{Weight:}}}
+
+- The weight of each sample data (measured in kilogram).  
+
+- Since P-value in both Wald Test and Likelihood Ratio Test is small(<0.05), we can conclude that the relationship between "Weight" and "the presence of brown fat" are significant. The estimated odds-ratio is round 0.97, the odds of the presence of brown fat is estimated to be decreased a factor of 0.97 for each 1 kg increase weight.  
+
+```{r include=FALSE}
+fit10=glm(BrownFat~Weight,family = binomial, data=data)
+#Wald Test for Indep:
+summary(fit10)
+#LR Test for Indep:
+drop1(fit10,test = "Chisq")
+exp(-0.030822)
+```
+
+(10) \textbf{\textcolor{blue}{\itshape{Size:}}}
+
+- The size of each sample data (measured in centimeter).
+
+- Since p-value in both Wald Test and Likelihood Ratio Test is small(<0.05), we can conclude that the relationship between "Size" and "the presence of brown fat" are significant.  
+
+- Estimated odds-ratio is round 0.97, the odds of the presence of brown fat is estimated to be decreased a factor of 0.97 for each 1 cm increase weight which is similar to the effect of weight we showed above.  
+
+```{r include=FALSE}
+fit11=glm(BrownFat~Size,family = binomial, data=data)
+#Wald Test for Indep:
+summary(fit11)
+#LR Test for Indep:
+drop1(fit11,test = "Chisq")
+exp(-0.029886)
+```
+
+(11) \textbf{\textcolor{blue}{\itshape{Body Mass Index:}}}
+
+- BMI stands for "Body Mass index", it is a commonly used international standard to measure the degree of body fat and thinness and whether it is healthy.
+
+- Since p-value in both Wald Test and Likelihood Ratio Test is quite small(<0.05), we can conclude that the relationship between "BMI" and "the presence of brown fat" are significant. The estimated odds-ratio is round 0.92, the odds of the presence of brown fat is estimated to be decreased a factor of 0.92 for each 1 unit increase of BMI.  
+
+```{r include=FALSE}
+fit12=glm(BrownFat~BMI,family = binomial, data=data)
+#Wald Test for Indep:
+summary(fit12)
+#LR Test for Indep:
+drop1(fit12,test = "Chisq")
+exp(-0.07819)
+```
+
+(12) \textbf{\textcolor{blue}{\itshape{Glycemia:}}}
+
+- Glycemia indicates the level of blood sugar concentration. 
+- Since p-value in both Wald Test and Likelihood Ratio Test is quite small(<0.05), we can conclude that the relationship between "Glycemy" and "the presence of brown fat" are significant. The estimated odds-ratio is round 0.75, the odds of the presence of brown fat is estimated to be decreased a factor of 0.75 for each 1 unit increase of Glycemia.  
+
+```{r include=FALSE}
+fit13=glm(BrownFat~Glycemia,family = binomial, data=data)
+#Wald Test for Indep:
+summary(fit13)
+#LR Test for Indep:
+drop1(fit13,test = "Chisq")
+exp(-0.28879 )
+```
+
+(13) \textbf{\textcolor{blue}{\itshape{Lean Body Weight:}}}
+
+- LBW stands for "Lean Body Weight". LBW shows the percentage of weight without the fat.  
+
+- Since p-value in both Wald Test and Likelihood Ratio Test is quite small(<0.05), we can conclude that the relationship between "LBW" and "the presence of brown fat" are significant. The estimated odds-ratio is 0.95, the odds of the presence of brown fat is estimated to be decreased a factor of 0.95 for each 1 unit increase of LBW.  
+
+```{r include=FALSE}
+fit14=glm(BrownFat~LBW,family = binomial, data=data)
+#Wald Test for Indep:
+summary(fit14)
+#LR Test for Indep:
+drop1(fit14,test = "Chisq")
+exp(-0.053198)
+
+```
+
+(14) \textbf{\textcolor{blue}{\itshape{Cancer Status:}}}
+
+- The presence of cancer in each sample. Cancer status is a binary indicator of whether the sample has cancer. 
+
+- We got estimated odds ratio is 0.877 and confidence interval for odds ratio is (0.697, 1.104).Since the estimated odds ratio is closed to 1. We can conclude that there is no significant relationship between cancer status and brown fat, they are likely independent. In likelihood ratio test, p-value is greater that 0.05 which confirms this conclusion.  
+
+```{r, include=FALSE}
+oddci <- function(a, b, c, d){
+  or <- a*d/b/c
+  se <- (1/a + 1/b + 1/c + 1/d)^0.5
+  z = qnorm(0.975)
+  ci.log <- c(log(or) - z*se, log(or) + z*se)
+  ci <- exp(ci.log)
+  list(or, ci)
+}
+status.g <- xtabs(~Cancer_Status + BrownFat)
+#delete NA response
+status.g <- status.g[-c(3), ]
+res <- oddci(1804, 2473, 143, 172)
+res[1]
+res[2]
+
+chisq.test(status.g)
+```
+
+(15) \textbf{\textcolor{blue}{\itshape{Cancer Type:}}}
+
+- Cancer type is a categorical variable that indicates the type of cancer the observed have. There are 17 types of cancer in this dataset, all other types of cancer fits in one category "other".
+
+- Note that there are N/A values in cancer type, we omit them while performing independence tests and further model building.
+
+- We fit data into poisson model, then perform Wald test on coefficients to see whether there is significant relationship between certain cancer type and existence of brown fat. There is strong evidence that digestive, breast and non-Hodgkin lymphoma cancer significantly related to brown fat. The odds of brown fat existing for people with cancers mentioned above is lower than people without cancer.  
+
+```{r, include=FALSE}
+type.g <- xtabs(~Cancer_Type+BrownFat)
+#delete NA response
+type.g <- type.g[-c(20), ]
+chisq.test(type.g)
+nas <- Cancer_Type == "NA"
+fat.nona <- BrownFat[!nas]
+type.nona <- Cancer_Type[!nas]
+#poisson
+fit.type.poi <- glm(fat.nona ~ type.nona,
+                family = poisson(link = identity))
+summary(fit.type.poi)
+#logit
+fit.type.log <- glm(fat.nona ~ type.nona,
+                family = binomial())
+summary(fit.type.log)
+```
+
+(16) \textbf{\textcolor{blue}{\itshape{TSH:}}}
+
+- TSH is a continuous variable that measures the thyroid-stimulating hormone level in blood.
+
+- Note that there are N/A values in TSH, we omit them while performing independence tests and further model building.
+
+- We fit data into logistic model, then perform Wald test. The p-value of TSH is 0.876, which is greater than significant level 5%, indicating there is no significant relationship between TSH and the existence of brown fat.  
+
+```{r, include=FALSE}
+nas <- TSH == "NA"
+tsh.nona <- as.numeric(TSH[!nas])
+data.nona <- as.numeric(BrownFat[!nas])
+#delete NA response
+#logit
+fit.tsh <- glm(data.nona ~ tsh.nona, family = binomial)
+summary(fit.tsh)
+#poisson
+fit.tsh.2 <- glm(data.nona ~ tsh.nona, family = poisson())
+summary(fit.tsh.2)
+```
+
+
+### Summary
+After removing these insignificant vaiarables in previous pages, we are able to get these following covariants remaining:\
+Sex, Diabetes, Age, Temperature (External Temperature, External Temperature in 2 days, 3 days, 1 week and 1 month), Duration of Sunshine, Weight, Size, BMI, Glycemia, LBW, Cancer Status and types of Cancer(digestive, breast and non-Hodgkin lymphoma cancer with index 2, 4, 13). \
+We now have developed a basic understanding of what factors may affect sbp. The results above
+could also act as a reference when we start bulding model in Part 3.
+\newline
+
+### Operations on Data
+\textbf{\large In order to build a more accurate model, we need to further reduce number of the available covariates.}
+
+\textbf{1. Dealing with excessive available parameters for expressing temperature}:\begin{itemize}
+  \item [-]
+  We noticed that there are a total of five parameters used to express covariate temperature, so many related parameters will undoubtedly affect the accuracy of the final model construction. \vspace{0.25cm}
+  \item [-]
+  We finally decided to choose only two parameters to represent the covariate temperature, one of which is the external temperature of the day, and the other is used to represent a recent temperature trend.\vspace{0.25cm}
+  \item [-]
+  From what we got in the previous part, we know that the shorter the time span of measuring temperature, the greater the influence on the presence or absence of brown fat. As a result, we chose the parameter "External Temperature in 2 Days" to represent the recent temperature trend.\vspace{0.25cm}
+\end{itemize}
+\textbf{2. Dealing with covariates with high multicollinearity}:\newline
+We got the following graph by using R code which indicates all the correlationships between 2 covariates. If multiple covariates share a high correlationship, we may only choose one of them when we are building the model:
+
+\hspace{1.75cm}![Correlationships between all the covariates](CoR.png){ width=45% }
+```{r, eval=FALSE, include=FALSE}
+attach(data)
+
+#for Cancer_Status
+Cancer_Status = as.numeric(data$Cancer_Status == 1)
+Sex = as.numeric(data$Sex == 2)
+
+data.rm = data.frame(Sex, Diabetes, Age, External_Temperature, Average_Temperature = Temperature_3Days, Duration_Sunshine, Weigth, Size, BMI, Glycemia, LBW, Cancer_Status, Cancer_Type2 = as.numeric(Cancer_Type == 2), Cancer_Type4 = as.numeric(Cancer_Type == 4), Cancer_Type13 = as.numeric(Cancer_Type == 13))
+
+#check correlation between variables
+C = cor(data.rm)
+
+library("corrplot")
+corrplot(C, method = "circle")
+```
+
+From the graph, we decided to: 
+\begin{itemize}
+  \item [-]
+  Choose "Weight" among "Weight", "BMI" and "LBW"(due to high corelationship).
+  \item [-]
+  Choose "Duration Sunshine" among "External Temperature", "Average Temperature" and "Duration Sunshine"(due to high corelationship).
+  \item [-]
+  This step further reduce the number of covariates and it may help us constructing the model.
+\end{itemize}
+
+\section{3. Model Selection:}
+To build the model, we first remove the missing data in Cancer_Status and Cancer_Type.
+```{r, include=FALSE}
+library(MASS)
+# remove missing data
+remove <- rep(0)
+for (index in 1:n) {
+  if (data$Cancer_Status[index] == "NA") {
+    remove <- append(remove, index)
+  }
+  else if (data$Cancer_Type[index] == "NA") {
+    remove <- append(remove, index)
+  }
+}
+
+data <- data[-remove,]
+```
+
+Positivity of Brown Fat is 6.774%, close to 5%. And the mean and variance of Borwn Fat is similar, which indicates that we should probably use poisson model.
+```{r, include=FALSE}
+sum(BrownFat)/4842
+mean(data$BrownFat)
+var(data$BrownFat)
+```
+
+We fitted all main effects (after multicollinearity deletion) in to Poisson model and perform forward and backward deletion.
+And we find the main effect model deleted with backward direction is better than the model with forward direction, so we choose the main effect deleted with backward direction.
+```{r, eval=FALSE, include=FALSE}
+# work for main effect
+fit.main <- glm(BrownFat ~factor(Sex) + Diabetes + Age + Day + Month +
+                  Duration_Sunshine + Temperature_2Days +
+                  factor(Season) + Weight + Size + Glycemia +
+                  Cancer_Status + TSH + as.numeric(Cancer_Type==2) +
+                  as.numeric(Cancer_Type==3) + as.numeric(Cancer_Type==8) +
+                  as.numeric(Cancer_Type==13) + as.numeric(Cancer_Type==16),
+                family = poisson, data = data)
+fit.small <- glm(BrownFat ~ 1, family = poisson, data = data)
+
+# step with forward direction which AIC = 2051, Residual Dev. = 1417
+stepAIC(fit.small, direction = "forward", scope=list(upper = fit.main, lower = fit.small), data = data)
+
+main.for <- glm(formula = BrownFat ~ Age + factor(Sex) + Weight + Diabetes + 
+    Temperature_2Days + as.numeric(Cancer_Type == 8) + as.numeric(Cancer_Type == 
+    13), family = poisson, data = data)
+
+# step with backward direction which AIC = 2051, Residual Dev. = 1407
+stepAIC(fit.main, direction = "backward", data = data)
+
+main.bac <- glm(formula = BrownFat ~ factor(Sex) + Diabetes + Age + Duration_Sunshine + 
+    Temperature_2Days + factor(Season) + Weight + Size + as.numeric(Cancer_Type == 
+    8) + as.numeric(Cancer_Type == 13), family = poisson, data = data)
+
+# try and compare with Logistic model which AIC = 2061, Residual Dev. = 1421
+main.logit <- glm(BrownFat ~ Diabetes + Age + Glycemia + factor(Sex) + Size + Weight + 
+                    Duration_Sunshine + (Cancer_Type == 2)+ (Cancer_Type == 4) + (Cancer_Type == 13),
+                  family = poisson, data = data)
+summary(main.logit)
+
+# compare models with forward and with backward
+# choose model with backward direction
+anova(main.for, main.bac, test = "Chisq")
+```
+
+Then we fitted all interaction effects into the chosen poisson model and also perform forward and backward deletion.
+Then we got 2 models with same AIC value, but the model with backward direction has smaller Residual Deviance, so we chose that one.
+```{r, eval=FALSE, include=FALSE}
+#use forward result, consider all two-way interactions
+inter.full <- glm(BrownFat ~ Age + factor(Sex) + Weight + Diabetes + 
+    Temperature_2Days + as.numeric(Cancer_Type == 8) +
+      as.numeric(Cancer_Type == 13) + Size + 
+    
+    Age:factor(Sex) + Age:Weight + Age:Diabetes + 
+    Age:Temperature_2Days + Age:as.numeric(Cancer_Type == 8) +
+    Age:as.numeric(Cancer_Type == 13) + Age:Size +
+      
+    factor(Sex):Weight + factor(Sex):Diabetes + 
+    factor(Sex):Temperature_2Days + 
+    factor(Sex):as.numeric(Cancer_Type == 8) +
+    factor(Sex):as.numeric(Cancer_Type == 13) + factor(Sex):Size +
+      
+    Weight:Diabetes + 
+    Weight:Temperature_2Days + 
+    Weight:as.numeric(Cancer_Type == 8) +
+    Weight:as.numeric(Cancer_Type == 13) + Weight:Size +
+      
+    Diabetes:Temperature_2Days+  
+    Diabetes:as.numeric(Cancer_Type == 8) +
+    Diabetes:as.numeric(Cancer_Type == 13) + Diabetes:Size +
+      
+    Temperature_2Days:as.numeric(Cancer_Type == 8) +
+    Temperature_2Days:as.numeric(Cancer_Type == 13) + External_Temperature:Size +
+      
+    as.numeric(Cancer_Type == 8):Size +
+      
+    as.numeric(Cancer_Type == 13):Size, 
+    
+    family = poisson, 
+    data = data)
+
+# with forward direction which AIC = 2039, Residual Dev. = 1399
+stepAIC(fit.small, direction = "forward", 
+        scope=list(upper = inter.full, lower = fit.small),
+        data = data)
+
+inter.for <-  glm(formula = BrownFat ~ Age + factor(Sex) + Weight + Diabetes + 
+    Temperature_2Days + as.numeric(Cancer_Type == 13) + as.numeric(Cancer_Type == 
+    8) + Age:Weight + Age:factor(Sex), family = poisson, data = data)
+
+# with backward direction which AIC = 2034, Residual Dev. = 1388
+stepAIC(inter.full, direction = "backward", data = data)
+
+inter.bac <- glm(formula = BrownFat ~ Age + factor(Sex) + Weight + Diabetes + 
+    Temperature_2Days + as.numeric(Cancer_Type == 8) + as.numeric(Cancer_Type == 
+    13) + Size + Age:factor(Sex) + Age:Weight + factor(Sex):Diabetes + 
+    Weight:Size + Diabetes:Size + Size:External_Temperature, 
+    family = poisson, data = data)
+
+# Reject null hypothesis, choose the backward one
+anova(inter.for, inter.bac, test = "Chisq")
+model.poi <- inter.bac
+```
+
+After observing the chosen model summary, some coefficients have pretty big p-values 
+Therefore we delete some coefficients which has p-value greater than 0.2 in Wald test.
+```{r, eval=FALSE, include=FALSE}
+summary(model.poi)
+```
+
+```{r}
+# the fitted model after deleting large p-value coefficients
+fit.poi <- glm(formula = BrownFat ~ Weight + Diabetes + Temperature_2Days 
+               + as.numeric(Cancer_Type == 13) + Size + Age:factor(Sex) 
+               + Age:Weight + factor(Sex):Diabetes + Weight:Size + Diabetes:Size 
+               + Size:External_Temperature, 
+               family = poisson(), data = data)
+summary(fit.poi)
+```
+
+\section{4. Model Diagnosis:}
+
+
+### 4.1 Goodness of fit test\
+Perform Hosmer-Lemeshow test with group number of 20.\
+p-value = 0.5594 > 5%, fail to reject $H_0$. Therefore, model is significant.
+```{r, echo = FALSE, warning = FALSE}
+library(ResourceSelection)
+hoslem.test(fit.poi$y, fit.poi$fitted.values, g = 20)
+```
+
+### 4.2 Classification table
+sensitivity = 0.802589, specificity = 0.6409702\
+Both values are pretty high, indicating model is a good fit.
+```{r,echo=FALSE}
+n = dim(data)[1]
+prop = sum(data$BrownFat == 1)/n
+
+predict <- as.numeric(fit.poi$fitted.values > prop)
+xtabs(~data$BrownFat + predict)
+
+sens <- 248/(61+248)
+spec <- 2669/(2669+1495)
+```
+
+### 4.3 ROC curve\
+Plot ROC curve. Concordance index is 0.774 greater than 0.5, we may argue that the model that we construct is relatively quite accurate.
+```{r include=FALSE}
+library(pROC)
+test_ror = roc(fit.poi$y~fitted(fit.poi), plot = TRUE, print.auc = TRUE)
+```
+
+\hspace{1.75cm}![ROC curve](roc.png){ width=45% }
+
+
+### 4.4 Validation\
+We randomly sampled 3500 observations for training, and 1342 observations for validation.\
+Train error = 34.46%, Validation error = 32.37%
+Since train error is similar to validation error, there is no sign of over-fitting.
+```{r, include=FALSE}
+#randomly sample 3500 train data and 1342 validation data
+library(MASS)
+set.seed(1004731917)
+indexs <- sample(1:n, 3500, replace = FALSE)
+data.in <- data[indexs,]
+data.out <- data[-indexs,]
+
+#error function for poisson
+error.poi <-function(fit, data){
+  true <- data$BrownFat
+  test <- predict(fit, data)
+  test <- as.numeric(exp(test) > prop)
+  round(sum(abs(true - test))/nrow(data), 4)
+}
+
+#train error
+train.err = error.poi(fit.poi, data.in)
+train.err
+
+#validation error
+validation.err = error.poi(fit.poi, data.out)
+validation.err
+```
+
+### 4.5 Residual Analysis\
+#### 4.5.1 Outlier and Influential Points
+From the residual-fitted plot we observed that there are three outliers, namely observation 2473, 2755, 844. Proceed to check residual-leverage plot, non of the outliers are influential point.
+```{r, include = FALSE}
+shapiro.test(fit.poi$residuals)
+
+fit.poi.2 <- glm(formula = BrownFat ~ Weight + Diabetes + 
+    External_Temperature + as.numeric(Cancer_Type == 
+    13) + Size + Age:factor(Sex) + Age:Weight + factor(Sex):Diabetes + 
+    Weight:Size + Diabetes:Size + Size:External_Temperature, 
+    family = poisson(), data = data)
+plot(fit.poi.2)
+#outliers 2473, 2755, 844
+```
+
+\hspace{1.75cm}![Residual Analysis 1](p1.png){ width=45% } 
+\hspace{1.75cm}![Residual Analysis 2](p4.png){ width=45% }
+
+```{r, include=FALSE}
+#THis place it used for let the graph to the located at the middle of the page, after so many round, IDK who change my settings
+# We have to make a code here or some "\begin{} \end{}" to put the graph below in the midddle of the page
+```
+
+
+
+#### 5.5.2 Check Model Assumption
+We also checked normal Q-Q plot at the end, and we observed that the normality assumption is violated, therefore we may need to perform box-cox transformation to derive a better model.
+```{r, include=FALSE}
+#THis place it used for let the graph to the located at the middle of the page, after so many round, IDK who change my settings
+# We have to make a code here or some "\begin{} \end{}" to put the graph below in the midddle of the page
+```
+
+\hspace{1.75cm}![Q-Q plot](p2.png){ width=45% }
+\hspace{1.75cm}![Conclusion Table](Conclusion.png){ width=45% }
+
+
+# 5. Conclusion:
+
+
+\textbf{The goal of this study is to derive a model based on the data from Molecular Imaging Center by identifying which factors determine the presence of brown fat in Humans. We found that the Temperature (includes duration of sunshine, external temperature, temperature in 2 days, 3 days, 7 days and 1 month), Age, Sex, Weight, Diabetes and Cancer Types have significant impact on the existence of brown fat, especially for temperature and Weight. These findings help us to learn more about how the brown fat plays a role in mitigating the deleterious effects of obesity and its benefits for cancer patients. However, as scientists mentioned, brown fat still has many unexplored benefits for humans, so our model is not completed, which may need to consider more factors in the future. Besides, we can enlarge our dataset, like using data from different hospitals or centers, as the prevalence of brown fat in current data is quite low. }\vspace{5cm}
+
+
+\fbox{%
+\parbox{\textwidth}{%
+\textbf{Reference List}\newline
+[1] Wein, H. (2019, September 17). How brown fat improves metabolism. National Institutes of Health (NIH). https://www.nih.gov/news-events/nih-research-matters/how-brown-fat-improves-metabolism\newline\newline
+[2] Tome ME, McNabb FM, Gwazdauskas FC. Adrenal responses to chronic and acute water stress in Japanese quail Coturnix japonica. Comp Biochem Physiol A Comp Physiol. 1985;81(1):171-9. doi: 10.1016/0300-9629(85)90284-1. PMID: 2859951.\newline\newline
+[3] Becher, T., Palanisamy, S., Kramer, D.J. et al. Brown adipose tissue is associated with cardiometabolic health. Nat Med 27, 58–65 (2021). https://doi.org/10.1038/s41591-020-1126-7\newline\newline
+[4] Finer, N. (2012). Better measures of fat mass - beyond BMI. Clinical Obesity, 2(3–4), 65.https://doi.org/10.1111/j.1758-8111.2012.00047.x
+}%
+}
+
+
